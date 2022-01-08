@@ -193,7 +193,7 @@ fi
 
 if [ -e "$LOGFILE" ]; then
     if NINELINE=$(grep '(911)' "$LOGFILE" | tail -n 1); then
-        LASTNL=$([[ "$NINELINE" =~ \[([^\]]+?)\] ]] && echo "${BASH_REMATCH[1]}")
+        LASTNL=$([[ "$NINELINE" =~ \[([^\]]+)\] ]] && echo "${BASH_REMATCH[1]}")
         LASTCONTACT=$(date -d "$LASTNL" '+%s')
         if [ $((NOW - LASTCONTACT)) -lt 1800 ]; then
             LOGLINE="Response code 911 received less than 30 minutes ago; canceling request."
