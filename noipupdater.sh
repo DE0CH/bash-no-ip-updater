@@ -56,6 +56,19 @@ function http_get() {
     fi
 }
 
+function parse_date() {
+    local string="$1"
+    PARSED_DATE=$(date -d "$string" +'%s' 2>/dev/null)
+    if [ -z "$PARSED_DATE" ]; then
+        PARSED_DATE=$(date -jf "%Y-%m-%d %H:%M:%S" "$string" +'%s' 2>/dev/null)
+    fi
+    if [ -z "$PARSED_DATE" ]; then
+        echo "Could not parse date."
+        exit 1
+    fi
+    return 0
+}
+
 # IP Validator
 # http://www.linuxjournal.com/content/validating-ip-address-bash-script
 function valid_ip() {
@@ -177,7 +190,7 @@ if [ ! -w "$LOGFILE" ]; then
     exit 1
 fi
 
-NOW=$(date '+%s')
+NOW=$(date +'%s')
 LOGDATE="[$(date +'%Y-%m-%d %H:%M:%S')]"
 
 # Program
@@ -194,8 +207,8 @@ fi
 if [ -e "$LOGFILE" ]; then
     if NINELINE=$(grep '(911)' "$LOGFILE" | tail -n 1); then
         LASTNL=$([[ "$NINELINE" =~ \[([^\]]+)\] ]] && echo "${BASH_REMATCH[1]}")
-        LASTCONTACT=$(date -d "$LASTNL" '+%s')
-        if [ $((NOW - LASTCONTACT)) -lt 1800 ]; then
+        parse_date "$LASTNL"
+        if [ $((NOW - PARSED_DATE)) -lt 1800 ]; then
             LOGLINE="Response code 911 received less than 30 minutes ago; canceling request."
             echo "$LOGLINE"
             echo "$LOGDATE $LOGLINE" >> "$LOGFILE"
