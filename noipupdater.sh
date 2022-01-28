@@ -58,12 +58,15 @@ function http_get() {
 
 function parse_date() {
     local string="$1"
-    PARSED_DATE=$(date -d "$string" +'%s' 2>/dev/null)
-    if [ -z "$PARSED_DATE" ]; then
-        PARSED_DATE=$(date -jf "%Y-%m-%d %H:%M:%S" "$string" +'%s' 2>/dev/null)
+    PARSED_DATE=$(date -d "$string" +'%s' 2>/dev/null || true)
+    if [ -z "$PARSED_DATE" ] && cmd_exists gdate; then
+        PARSED_DATE=$(gdate -d "$string" +'%s' 2>/dev/null || true)
     fi
     if [ -z "$PARSED_DATE" ]; then
-        echo "Could not parse date."
+        PARSED_DATE=$(date -jf "%Y-%m-%d %H:%M:%S" "$string" +'%s' 2>/dev/null || true)
+    fi
+    if [ -z "$PARSED_DATE" ]; then
+        echo "Could not parse date." >&2
         exit 1
     fi
     return 0
