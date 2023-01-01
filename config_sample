@@ -18,3 +18,9 @@ LOGDIR="$HOME/logs"
 # length exceeds 10010 lines, moving 10000 lines to backup and
 # retaining remaining lines in original logfile
 ROTATE_LOGS=true
+
+# Console output verbosity
+# 0 - Show all output
+# 4 - Show only errors
+# 6 - Hide all output
+CONSOLE_OUTPUT_LEVEL=0

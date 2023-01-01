@@ -20,7 +20,7 @@ set -eo pipefail
 # Functions
 
 function usage() {
-    echo "$0 [-c /path/to/config] [-i 123.123.123.123]" >&2
+    console_error "$0 [-c /path/to/config] [-i 123.123.123.123]"
     exit 1
 }
 
@@ -51,7 +51,7 @@ function http_get() {
     elif cmd_exists wget; then
         wget -q -O - --user-agent="$USERAGENT" "$1"
     else
-        echo "No http tool found. Install curl or wget." >&2
+        console_error "No http tool found. Install curl or wget."
         exit 1
     fi
 }
@@ -66,7 +66,7 @@ function parse_date() {
         PARSED_DATE=$(date -jf "%Y-%m-%d %H:%M:%S" "$string" +'%s' 2>/dev/null || true)
     fi
     if [ -z "$PARSED_DATE" ]; then
-        echo "Could not parse date." >&2
+        console_error "Could not parse date."
         exit 1
     fi
     return 0
@@ -139,6 +139,24 @@ function get_logline() {
     return 0
 }
 
+function console_info() {
+    local msg="$1"
+    local lvl="$CONSOLE_OUTPUT_LEVEL"
+
+    if [ -z "$lvl" ] || (( lvl < 3 )); then
+        echo "$msg"
+    fi
+}
+
+function console_error() {
+    local msg="$1"
+    local lvl="$CONSOLE_OUTPUT_LEVEL"
+
+    if [ -z "$lvl" ] || (( lvl < 5 )); then
+        echo "$msg" >&2
+    fi
+}
+
 # Defines
 
 CONFIGFILE=""
@@ -158,17 +176,21 @@ fi
 if [ -e "$CONFIGFILE" ]; then
     source "$CONFIGFILE"
 else
-    echo "Config file not found." >&2
+    console_error "Config file not found."
     exit 1
 fi
 
+if ! (( CONSOLE_OUTPUT_LEVEL >= 0 && CONSOLE_OUTPUT_LEVEL <= 6 )); then
+    CONSOLE_OUTPUT_LEVEL=0
+fi
+
 if [ -n "$NEWIP" ] && ! valid_ip "$NEWIP"; then
-    echo "Invalid IP address specified." >&2
+    console_error "Invalid IP address specified."
     exit 1
 fi
 
 if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-   echo "USERNAME or PASSWORD has not been set in the config file." >&2
+   console_error "USERNAME or PASSWORD has not been set in the config file."
    exit 1
 fi
 
@@ -176,7 +198,7 @@ USERAGENT="Bash No-IP Updater/1.2 $USERNAME"
 
 if [ ! -d "$LOGDIR" ]; then
     if ! mkdir -p "$LOGDIR"; then
-        echo "Log directory could not be created or accessed." >&2
+        console_error "Log directory could not be created or accessed."
         exit 1
     fi
 fi
@@ -184,12 +206,12 @@ fi
 LOGFILE=${LOGDIR%/}/noip.log
 if [ ! -e "$LOGFILE" ]; then
     if ! touch "$LOGFILE"; then
-        echo "Log files could not be created. Is the log directory writable?" >&2
+        console_error "Log files could not be created. Is the log directory writable?"
         exit 1
     fi
 fi
 if [ ! -w "$LOGFILE" ]; then
-    echo "Log file not writable." >&2
+    console_error "Log file not writable."
     exit 1
 fi
 
@@ -199,11 +221,14 @@ LOGDATE="[$(date +'%Y-%m-%d %H:%M:%S')]"
 # Program
 
 if [ -e "$LOGFILE" ] && tail -n1 "$LOGFILE" | grep -q -m1 '(abuse)'; then
-    echo "This account has been flagged for abuse. You need to contact noip.com to resolve"
-    echo "the issue. Once you have confirmed your account is in good standing, remove the"
-    echo "log line containing (abuse) from:"
-    echo "  $LOGFILE"
-    echo "Then, re-run this script."
+    read -r -d '' CONSOLE_MSG << EOL 
+This account has been flagged for abuse. You need to contact noip.com to resolve
+the issue. Once you have confirmed your account is in good standing, remove the
+log line containing (abuse) from:
+  $LOGFILE
+Then, re-run this script.
+EOL
+    console_error "$CONSOLE_MSG"
     exit 1
 fi
 
@@ -213,7 +238,7 @@ if [ -e "$LOGFILE" ]; then
         parse_date "$LASTNL"
         if [ $((NOW - PARSED_DATE)) -lt 1800 ]; then
             LOGLINE="Response code 911 received less than 30 minutes ago; canceling request."
-            echo "$LOGLINE"
+            console_error "$LOGLINE"
             echo "$LOGDATE $LOGLINE" >> "$LOGFILE"
             exit 1
         fi
@@ -232,9 +257,9 @@ if [ "$ROTATE_LOGS" = true ]; then
             fi
             LASTLINES=$(tail -n +10001 "$LOGFILE")
             echo "$LASTLINES" > "$LOGFILE"
-            echo "Log file rotated"
+            console_info "Log file rotated"
         else
-            echo "Log file could not be rotated"
+            console_error "Log file could not be rotated"
         fi
     fi
 fi
@@ -259,7 +284,7 @@ IFS=$OIFS
 
 for index in "${!SPLIT_HOST[@]}"; do
     get_logline "${SPLIT_HOST[index]}" "${SPLIT_RESPONSE[index]}"
-    echo "$LOGLINE"
+    console_info "$LOGLINE"
     echo "$LOGDATE $LOGLINE" >> "$LOGFILE"
 done
 
