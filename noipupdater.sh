@@ -221,7 +221,8 @@ LOGDATE="[$(date +'%Y-%m-%d %H:%M:%S')]"
 # Program
 
 if [ -e "$LOGFILE" ] && tail -n1 "$LOGFILE" | grep -q -m1 '(abuse)'; then
-    read -r -d '' CONSOLE_MSG << EOL 
+    # set -e aborts after this read command unless `|| true` is appended
+    read -r -d '' CONSOLE_MSG << EOL || true
 This account has been flagged for abuse. You need to contact noip.com to resolve
 the issue. Once you have confirmed your account is in good standing, remove the
 log line containing (abuse) from:
