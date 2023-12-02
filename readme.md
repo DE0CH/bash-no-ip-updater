@@ -1,13 +1,12 @@
 ## Bash No-IP Updater
 
-A bash script to update the IP address of [No-IP](https://www.noip.com/) hostnames. Supports multiple hostname updates and log rotation (see `config_sample`). Interprets [No-IP protocol responses](https://www.noip.com/integrate/response) and follows client guidelines.
+A bash script to update the IP address of [No-IP](https://www.noip.com/) hostnames. Supports multiple hostname updates (see `config_sample`). Interprets [No-IP protocol responses](https://www.noip.com/integrate/response) and follows client guidelines.
 
 ## Prerequisites
 
 - `bash`
 - `curl` or `wget`
 - GNU `coreutils`
-- `gzip` (optional, for log rotation)
 
 ## Usage
 

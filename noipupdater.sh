@@ -196,74 +196,9 @@ fi
 
 USERAGENT="Bash No-IP Updater/1.3 $USERNAME"
 
-if [ ! -d "$LOGDIR" ]; then
-    if ! mkdir -p "$LOGDIR"; then
-        console_error "Log directory could not be created or accessed."
-        exit 1
-    fi
-fi
-
-LOGFILE=${LOGDIR%/}/noip.log
-if [ ! -e "$LOGFILE" ]; then
-    if ! touch "$LOGFILE"; then
-        console_error "Log files could not be created. Is the log directory writable?"
-        exit 1
-    fi
-fi
-if [ ! -w "$LOGFILE" ]; then
-    console_error "Log file not writable."
-    exit 1
-fi
-
 NOW=$(date +'%s')
-LOGDATE="[$(date +'%Y-%m-%d %H:%M:%S')]"
 
 # Program
-
-if [ -e "$LOGFILE" ] && tail -n1 "$LOGFILE" | grep -q -m1 '(abuse)'; then
-    # set -e aborts after this read command unless `|| true` is appended
-    read -r -d '' CONSOLE_MSG << EOL || true
-This account has been flagged for abuse. You need to contact noip.com to resolve
-the issue. Once you have confirmed your account is in good standing, remove the
-log line containing (abuse) from:
-  $LOGFILE
-Then, re-run this script.
-EOL
-    console_error "$CONSOLE_MSG"
-    exit 1
-fi
-
-if [ -e "$LOGFILE" ]; then
-    if NINELINE=$(grep '(911)' "$LOGFILE" | tail -n 1); then
-        LASTNL=$([[ "$NINELINE" =~ \[([^\]]+)\] ]] && echo "${BASH_REMATCH[1]}")
-        parse_date "$LASTNL"
-        if [ $((NOW - PARSED_DATE)) -lt 1800 ]; then
-            LOGLINE="Response code 911 received less than 30 minutes ago; canceling request."
-            console_error "$LOGLINE"
-            echo "$LOGDATE $LOGLINE" >> "$LOGFILE"
-            exit 1
-        fi
-    fi
-fi
-
-if [ "$ROTATE_LOGS" = true ]; then
-    LOGLENGTH=$(wc -l "$LOGFILE" | awk '{ print $1 }')
-    if [ $((LOGLENGTH)) -ge 10010 ]; then
-        BACKUPDATE=$(date +'%Y-%m-%d_%H%M%S')
-        BACKUPFILE="$LOGFILE-$BACKUPDATE.log"
-        if touch "$BACKUPFILE"; then
-            head -10000 "$LOGFILE" > "$BACKUPFILE"
-            if cmd_exists gzip; then
-                gzip "$BACKUPFILE"
-            fi
-            LASTLINES=$(tail -n +10001 "$LOGFILE")
-            echo "$LASTLINES" > "$LOGFILE"
-            console_info "Log file rotated"
-        else
-            console_error "Log file could not be rotated"
-        fi
-    fi
-fi
 
 USERNAME=$(urlencode "$USERNAME")
 PASSWORD=$(urlencode "$PASSWORD")
@@ -286,7 +221,6 @@ IFS=$OIFS
 for index in "${!SPLIT_HOST[@]}"; do
     get_logline "${SPLIT_HOST[index]}" "${SPLIT_RESPONSE[index]}"
     console_info "$LOGLINE"
-    echo "$LOGDATE $LOGLINE" >> "$LOGFILE"
 done
 
 exit 0
